@@ -1,0 +1,71 @@
+---
+
+- hosts: localhost
+  gather_facts: no
+# stworzenie zmiennej new host i zapytanie przy odpaleniu playbooka
+  vars_prompt:
+  - name: new_host
+    prompt: New host IP address
+    private: no
+
+  tasks:
+  - name: Add provided host to temporary inventory
+    add_host:
+      name: "{{ new_host }}"
+      groups: temporary_host_group 
+      ansible_user: test-adm
+      ansible_password: testpassword
+      ansible_become_password: testpassword
+#  - name: Add provided host to known hosts
+#    shell: ssh-keyscan -H "{{ new_host }}" >> ~/.ssh/known_hosts
+
+- hosts: temporary_host_group
+  become: true
+  tasks:
+  - name: Create ansible user
+    ansible.builtin.user:
+      name: ansible
+      home: /home/ansible
+      shell: /bin/bash
+      password_lock: true
+
+  - name: create ssh directory for ansible user
+    ansible.builtin.file:
+      path: /home/ansible/.ssh
+      state: directory
+      mode: 0755
+      owner: ansible
+      group: ansible
+
+  - name: create ssh directory for admin user
+    ansible.builtin.file:
+      path: /home/test-adm/.ssh
+      state: directory
+      mode: 0755
+      owner: test-adm 
+      group: test-adm
+
+  - name: copy ssh public key for ansible user
+    template:
+      src: /home/ansible/ansiblekey.j2
+      dest: /home/ansible/.ssh/authorized_keys
+      owner: ansible
+      group: ansible
+      mode: 0664
+
+  - name: copy ssh public key for admin user
+    template:
+      src: /home/ansible/adminkey.j2
+      dest: /home/test-adm/.ssh/authorized_keys
+      owner: test-adm
+      group: test-adm
+      mode: 0664
+
+  - name: add config template to /etc/sshd/ssh_config.d/
+    template:
+      src: /home/ansible/ansible1/00_sshd_basic.j2
+      dest: /etc/ssh/sshd_config.d/00_sshd_basic.conf
+      owner: root
+      group: root
+      mode: 0600
+    
