@@ -1,2 +1,2 @@
-192.168.1.222
-192.168.1.221
+factorio ansible_host=192.168.1.222
+docker ansible_host=192.168.1.221
