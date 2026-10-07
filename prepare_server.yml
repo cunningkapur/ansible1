@@ -13,7 +13,7 @@
     add_host:
       name: "{{ new_host }}"
       groups: temporary_host_group 
-      ansible_user: test-adm
+      ansible_user: pakur-adm
       ansible_password: testpassword
       ansible_become_password: testpassword
 #  - name: Add provided host to known hosts
@@ -39,11 +39,11 @@
 
   - name: create ssh directory for admin user
     ansible.builtin.file:
-      path: /home/test-adm/.ssh
+      path: /home/pakur-adm/.ssh
       state: directory
       mode: 0755
-      owner: test-adm 
-      group: test-adm
+      owner: pakur-adm 
+      group: pakur-adm
 
   - name: copy ssh public key for ansible user
     template:
@@ -51,15 +51,15 @@
       dest: /home/ansible/.ssh/authorized_keys
       owner: ansible
       group: ansible
-      mode: 0664
+      mode: 0644
 
   - name: copy ssh public key for admin user
     template:
       src: /home/ansible/adminkey.j2
-      dest: /home/test-adm/.ssh/authorized_keys
-      owner: test-adm
-      group: test-adm
-      mode: 0664
+      dest: /home/pakur-adm/.ssh/authorized_keys
+      owner: pakur-adm
+      group: pakur-adm
+      mode: 0644
 
   - name: add config template to /etc/sshd/ssh_config.d/
     template:
@@ -69,3 +69,12 @@
       group: root
       mode: 0600
     
+  - name: install fail2ban
+    dnf:
+      name: fail2ban
+      state: latest
+  
+  - name: restart sshd service
+    systemd_service:
+      state: restarted
+      name: sshd
