@@ -7,6 +7,8 @@
   - name: new_host
     prompt: New host IP address
     private: no
+  vars_files:
+     - /home/ansible/vault/credentials-01.yml
 
   tasks:
   - name: Add provided host to temporary inventory
@@ -14,16 +16,16 @@
       name: "{{ new_host }}"
       groups: temporary_host_group 
       ansible_user: "{{ server_user }}"
-#      ansible_password: testpassword
-#      ansible_become_password: testpassword
+      ansible_password: "{{ server_password }}"
   - name: Add provided host to known hosts
     shell: ssh-keyscan -H "{{ new_host }}" >> ~/.ssh/known_hosts
 
 - hosts: temporary_host_group
   vars_files:
-    - /home/ansible/vault/credentials01.yml
+    - /home/ansible/vault/credentials-01.yml
+  vars:
+    ansible_become_password: "{{ server_password }}"
   become: true
-  ansible_become_pass: "{{ server_password }}"
   tasks:
   - name: Create ansible user
     ansible.builtin.user:
