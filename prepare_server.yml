@@ -7,10 +7,19 @@
   - name: new_host
     prompt: New host IP address
     private: no
+  - name: new_host_name
+    prompt: New host Name
+    private: no
   vars_files:
      - /home/ansible/vault/credentials-01.yml
 
   tasks:
+  - name: Add host to inventory file
+    lineinfile:
+      path: /home/ansible/inventory
+      state: present
+      line: "{{ new_host_name }} ansible_host={{ new_host }}"
+
   - name: Add provided host to temporary inventory
     add_host:
       name: "{{ new_host }}"
@@ -19,6 +28,8 @@
       ansible_password: "{{ server_password }}"
   - name: Add provided host to known hosts
     shell: ssh-keyscan -H "{{ new_host }}" >> ~/.ssh/known_hosts
+    tags: 
+      - knownhosts
 
 - hosts: temporary_host_group
   vars_files:
@@ -64,6 +75,14 @@
       dest: "/home/{{server_user}}/.ssh/authorized_keys"
       owner: "{{ server_user }}"
       group: "{{ server_user }}"
+      mode: 0600
+
+  - name: copy sudoers file for ansible user
+    copy:
+      src: /home/ansible/ansible-sudo
+      dest: /etc/sudoers.d/ansible
+      owner: root
+      group: root
       mode: 0600
 
   - name: add config template to /etc/sshd/ssh_config.d/
