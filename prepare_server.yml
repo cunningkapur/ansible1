@@ -2,7 +2,7 @@
 
 - hosts: localhost
   gather_facts: no
-# stworzenie zmiennej new host i zapytanie przy odpaleniu playbooka
+# get IP of new server 
   vars_prompt:
   - name: new_host
     prompt: New host IP address
@@ -13,14 +13,17 @@
     add_host:
       name: "{{ new_host }}"
       groups: temporary_host_group 
-      ansible_user: pakur-adm
-      ansible_password: testpassword
-      ansible_become_password: testpassword
-#  - name: Add provided host to known hosts
-#    shell: ssh-keyscan -H "{{ new_host }}" >> ~/.ssh/known_hosts
+      ansible_user: "{{ server_user }}"
+#      ansible_password: testpassword
+#      ansible_become_password: testpassword
+  - name: Add provided host to known hosts
+    shell: ssh-keyscan -H "{{ new_host }}" >> ~/.ssh/known_hosts
 
 - hosts: temporary_host_group
+  vars_files:
+    - /home/ansible/vault/credentials01.yml
   become: true
+  ansible_become_pass: "{{ server_password }}"
   tasks:
   - name: Create ansible user
     ansible.builtin.user:
@@ -33,17 +36,17 @@
     ansible.builtin.file:
       path: /home/ansible/.ssh
       state: directory
-      mode: 0755
+      mode: 0700
       owner: ansible
       group: ansible
 
   - name: create ssh directory for admin user
     ansible.builtin.file:
-      path: /home/pakur-adm/.ssh
+      path: "/home/{{ server_user}}/.ssh"
       state: directory
-      mode: 0755
-      owner: pakur-adm 
-      group: pakur-adm
+      mode: 0700
+      owner: "{{ server_user }}"
+      group: "{{ server_user }}"
 
   - name: copy ssh public key for ansible user
     template:
@@ -51,15 +54,15 @@
       dest: /home/ansible/.ssh/authorized_keys
       owner: ansible
       group: ansible
-      mode: 0644
+      mode: 0600
 
   - name: copy ssh public key for admin user
     template:
       src: /home/ansible/adminkey.j2
-      dest: /home/pakur-adm/.ssh/authorized_keys
-      owner: pakur-adm
-      group: pakur-adm
-      mode: 0644
+      dest: "/home/{{server_user}}/.ssh/authorized_keys"
+      owner: "{{ server_user }}"
+      group: "{{ server_user }}"
+      mode: 0600
 
   - name: add config template to /etc/sshd/ssh_config.d/
     template:
@@ -73,6 +76,11 @@
     dnf:
       name: fail2ban
       state: latest
+
+  - name: remove cockpit
+    dnf:
+      name: cockpit
+      state: absent
   
   - name: restart sshd service
     systemd_service:
